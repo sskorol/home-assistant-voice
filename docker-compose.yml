@@ -1,0 +1,88 @@
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    restart: unless-stopped
+
+  whisper:
+    container_name: whisper
+    image: linuxserver/faster-whisper:2.4.0-gpu
+    restart: unless-stopped
+    volumes:
+      - ./whisper-data:/config
+    runtime: nvidia
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Bucharest
+      - WHISPER_MODEL=large-v3
+      - WHISPER_BEAM=1
+      - WHISPER_LANG=en
+    ports:
+      - "10300:10300"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  piper:
+    container_name: piper
+    image: linuxserver/piper:1.4.0-gpu
+    restart: unless-stopped
+    volumes:
+      - ./piper-data:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Bucharest
+      - PIPER_VOICE=en_US-libritts-high
+      # - PIPER_LENGTH=1.0 #optional
+      # - PIPER_NOISE=0.667 #optional
+      # - PIPER_NOISEW=0.333 #optional
+      # - PIPER_SPEAKER=0 #optional
+      # - PIPER_PROCS=1 #optional
+    ports:
+      - "10200:10200"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:0.5.7
+    ports:
+      - "11434:11434"
+    volumes:
+      - /usr/share/ollama/.ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
